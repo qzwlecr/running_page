@@ -28,11 +28,17 @@ if __name__ == "__main__":
         action="store_true",
         help="if is only for running",
     )
+    parser.add_argument(
+        "is_reverse",
+        dest="is_reverse",
+        nargs="?",
+        default=False,
+        help="from global to cn",
+    )
 
     options = parser.parse_args()
     secret_string_cn = options.cn_secret_string
     secret_string_global = options.global_secret_string
-    auth_domain = "CN"
     is_only_running = options.only_run
     if secret_string_cn is None or secret_string_global is None:
         print("Missing argument nor valid configuration file")
@@ -55,8 +61,8 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(
         download_new_activities(
-            secret_string_cn,
-            auth_domain,
+            secret_string_global if options.is_reverse else secret_string_cn,
+            "COM" if options.is_reverse else "CN",
             downloaded_activity,
             is_only_running,
             folder,
@@ -78,8 +84,8 @@ if __name__ == "__main__":
     print("Files to sync:" + " ".join(to_upload_files))
     # FIXME is com ok here?
     garmin_global_client = Garmin(
-        secret_string_global,
-        "COM",
+        secret_string_cn if options.is_reverse else secret_string_global,
+        "CN" if options.is_reverse else "COM",
         is_only_running,
     )
     loop = asyncio.get_event_loop()
