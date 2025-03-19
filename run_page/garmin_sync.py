@@ -382,7 +382,7 @@ async def download_new_activities(
             for id in to_generate_garmin_ids
         ],
     )
-    print(f"Download finished. Elapsed {time.time()-start_time} seconds")
+    print(f"Download finished. Elapsed {time.time() - start_time} seconds")
 
     await client.req.aclose()
     return to_generate_garmin_ids, to_generate_garmin_id2title
