@@ -272,7 +272,7 @@ async def download_garmin_data(
     folder = FOLDER_DICT.get(file_type, "gpx")
     try:
         file_data = await client.download_activity(activity_id, file_type=file_type)
-        if summary_infos is not None:
+        if summary_infos is not None and file_type == "gpx":
             file_data = add_summary_info(file_data, summary_infos.get(activity_id))
         file_path = os.path.join(folder, f"{activity_id}.{file_type}")
         need_unzip = False
@@ -382,7 +382,7 @@ async def download_new_activities(
             for id in to_generate_garmin_ids
         ],
     )
-    print(f"Download finished. Elapsed {time.time()-start_time} seconds")
+    print(f"Download finished. Elapsed {time.time() - start_time} seconds")
 
     await client.req.aclose()
     return to_generate_garmin_ids, to_generate_garmin_id2title
