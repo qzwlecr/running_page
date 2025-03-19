@@ -94,7 +94,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Build
-        env:
         run: PATH_PREFIX=/ pnpm build
 
       - name: Upload artifact
