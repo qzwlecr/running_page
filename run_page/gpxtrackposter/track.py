@@ -404,6 +404,9 @@ class Track:
             if message["enhanced_avg_speed"]
             else message["avg_speed"]
         )
+        self.elevation_gain = (
+            message["total_ascent"] if "total_ascent" in message else 0
+        )
         for record in fit["record_mesgs"]:
             if "position_lat" in record and "position_long" in record:
                 lat = record["position_lat"] / SEMICIRCLE
