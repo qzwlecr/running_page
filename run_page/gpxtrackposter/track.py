@@ -403,6 +403,9 @@ class Track:
         self.moving_dict["average_speed"] = message.get(
             "enhanced_avg_speed"
         ) or message.get("avg_speed", 0)
+        self.elevation_gain = (
+            message["total_ascent"] if "total_ascent" in message else 0
+        )
         for record in fit["record_mesgs"]:
             if "position_lat" in record and "position_long" in record:
                 lat = record["position_lat"] / SEMICIRCLE
