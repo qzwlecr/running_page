@@ -306,7 +306,7 @@ async def download_new_activities(
 
     start_time = time.time()
     await gather_with_concurrency(
-        10,
+        1,
         [
             download_garmin_data(client, id, file_type=file_type)
             for id in to_generate_garmin_ids
