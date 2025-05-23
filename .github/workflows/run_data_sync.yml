@@ -28,7 +28,7 @@ env:
   RUN_TYPE: garmin
   ATHLETE: qzwlecr
   TITLE: qzwlecr Running
-  MIN_GRID_DISTANCE: 0.5 # change min distance here
+  MIN_GRID_DISTANCE: 1 # change min distance here
   TITLE_GRID: Runs # also here
 
   # IGNORE_BEFORE_SAVING: True # if you want to ignore some data before saving, set this to True
