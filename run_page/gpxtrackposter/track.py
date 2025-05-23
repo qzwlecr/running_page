@@ -395,6 +395,12 @@ class Track:
         self.elevation_gain = (
             message["total_ascent"] if "total_ascent" in message else 0
         )
+        self.moving_dict["average_speed"] = (
+            (self.moving_dict["distance"] + self.elevation_gain * 10)
+            / self.moving_dict["moving_time"].total_seconds()
+            if self.moving_dict["moving_time"].total_seconds() > 0
+            else 0
+        )
         for record in fit["record_mesgs"]:
             if "position_lat" in record and "position_long" in record:
                 lat = record["position_lat"] / SEMICIRCLE
@@ -432,16 +438,15 @@ class Track:
             self.moving_dict["elapsed_time"] += other.moving_dict["elapsed_time"]
             self.polyline_container.extend(other.polyline_container)
             self.polyline_str = polyline.encode(self.polyline_container)
-            self.moving_dict["average_speed"] = (
-                self.moving_dict["distance"]
-                / self.moving_dict["moving_time"].total_seconds()
-            )
-            self.file_names.extend(other.file_names)
-            self.special = self.special or other.special
-            self.average_heartrate = self.average_heartrate or other.average_heartrate
             self.elevation_gain = (
                 self.elevation_gain if self.elevation_gain else 0
             ) + (other.elevation_gain if other.elevation_gain else 0)
+            self.moving_dict["average_speed"] = (
+                self.moving_dict["distance"] + self.elevation_gain * 10
+            ) / self.moving_dict["moving_time"].total_seconds()
+            self.file_names.extend(other.file_names)
+            self.special = self.special or other.special
+            self.average_heartrate = self.average_heartrate or other.average_heartrate
         except Exception as e:
             print(
                 f"something wrong append this {self.end_time},in files {str(self.file_names)}: {e}"
