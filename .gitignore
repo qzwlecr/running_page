@@ -25,4 +25,12 @@ config.yaml
 route.png
 route.svg
 
+# Generated assets (cached)
+assets/github*.svg
+assets/year*.svg
+assets/grid.svg
+assets/mol*.svg
+PNG_OUT/*.png
+src/static/activities.json
+
 .env
