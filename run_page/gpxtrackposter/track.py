@@ -366,7 +366,12 @@ class Track:
     def _load_fit_data(self, fit: dict):
         _polylines = []
         self.polyline_container = []
-        message = fit["session_mesgs"][0]
+        session_messages = [
+            session
+            for session in fit["session_mesgs"]
+            if session.get("total_distance") is not None
+        ]
+        message = self._merge_fit_session_messages(session_messages)
         self.start_time = datetime.datetime.fromtimestamp(
             (message["start_time"] + FIT_EPOCH_S), tz=timezone.utc
         )
@@ -403,6 +408,9 @@ class Track:
         self.moving_dict["average_speed"] = message.get(
             "enhanced_avg_speed"
         ) or message.get("avg_speed", 0)
+        self.elevation_gain = (
+            message["total_ascent"] if "total_ascent" in message else 0
+        )
         for record in fit["record_mesgs"]:
             if "position_lat" in record and "position_long" in record:
                 lat = record["position_lat"] / SEMICIRCLE
@@ -425,9 +433,72 @@ class Track:
         if "file_id_mesgs" in fit:
             device_message = fit["file_id_mesgs"][0]
             if "manufacturer" in device_message:
-                self.device = device_message["manufacturer"]
+                self.device = str(device_message["manufacturer"])
             if "garmin_product" in device_message:
-                self.device += " " + device_message["garmin_product"]
+                self.device += " " + str(device_message["garmin_product"])
+
+    @staticmethod
+    def _merge_fit_session_messages(session_messages):
+        if not session_messages:
+            raise TrackLoadError("Session message or total distance is missing.")
+        if len(session_messages) == 1:
+            return session_messages[0]
+
+        merged = dict(session_messages[0])
+        start_time = min(message["start_time"] for message in session_messages)
+        end_time = max(
+            message["start_time"] + message.get("total_elapsed_time", 0)
+            for message in session_messages
+        )
+        total_timer_time = sum(
+            message.get("total_timer_time", 0) for message in session_messages
+        )
+        merged["start_time"] = start_time
+        merged["total_elapsed_time"] = end_time - start_time
+        merged["total_timer_time"] = total_timer_time
+        merged["total_distance"] = sum(
+            message.get("total_distance", 0) for message in session_messages
+        )
+        merged["total_ascent"] = sum(
+            message.get("total_ascent", 0) for message in session_messages
+        )
+        merged["total_descent"] = sum(
+            message.get("total_descent", 0) for message in session_messages
+        )
+
+        moving_times = [
+            message.get("total_moving_time") for message in session_messages
+        ]
+        if all(time is not None for time in moving_times):
+            merged["total_moving_time"] = sum(moving_times)
+        elif "total_moving_time" in merged:
+            del merged["total_moving_time"]
+
+        heart_rate_weights = [
+            (message.get("avg_heart_rate"), message.get("total_timer_time", 0))
+            for message in session_messages
+            if message.get("avg_heart_rate") is not None
+            and message.get("total_timer_time", 0) > 0
+        ]
+        if heart_rate_weights:
+            total_weight = sum(weight for _, weight in heart_rate_weights)
+            merged["avg_heart_rate"] = round(
+                sum(hr * weight for hr, weight in heart_rate_weights) / total_weight
+            )
+
+        merged["enhanced_avg_speed"] = (
+            merged["total_distance"] / total_timer_time if total_timer_time else 0
+        )
+        merged["avg_speed"] = merged["enhanced_avg_speed"]
+
+        sports = {message.get("sport") for message in session_messages}
+        sub_sports = [message.get("sub_sport") for message in session_messages]
+        if len(sports) == 1:
+            merged["sport"] = next(iter(sports))
+        if "trail" in sub_sports:
+            merged["sub_sport"] = "trail"
+
+        return merged
 
     def append(self, other):
         """Append other track to self."""

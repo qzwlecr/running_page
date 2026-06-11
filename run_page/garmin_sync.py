@@ -46,6 +46,11 @@ GARMIN_CN_URL_DICT = {
     "ACTIVITY_URL": "https://connectapi.garmin.cn/activity-service/activity/{activity_id}",
 }
 
+GARMIN_ONLY_RUN_ACTIVITY_TYPES = [
+    "running",
+    "multi_sport",
+]
+
 
 class Garmin:
     def __init__(self, secret_string, auth_domain, is_only_running=False):
@@ -101,12 +106,14 @@ class Garmin:
                 )
                 await self.fetch_data(url, retrying=True)
 
-    async def get_activities(self, start, limit):
+    async def get_activities(self, start, limit, activity_type=None):
         """
         Fetch available activities
         """
         url = f"{self.modern_url}/activitylist-service/activities/search/activities?start={start}&limit={limit}"
-        if self.is_only_running:
+        if activity_type:
+            url = url + f"&activityType={activity_type}"
+        elif self.is_only_running:
             url = url + "&activityType=running"
         return await self.fetch_data(url)
 
@@ -305,12 +312,20 @@ async def download_garmin_data(
         traceback.print_exc()
 
 
-async def get_activity_id_list(client, start=0):
-    activities = await client.get_activities(start, 100)
+async def get_activity_id_list(client, start=0, activity_type=None):
+    if client.is_only_running and activity_type is None:
+        activity_ids = []
+        for garmin_activity_type in GARMIN_ONLY_RUN_ACTIVITY_TYPES:
+            activity_ids.extend(
+                await get_activity_id_list(client, activity_type=garmin_activity_type)
+            )
+        return list(dict.fromkeys(activity_ids))
+
+    activities = await client.get_activities(start, 100, activity_type=activity_type)
     if len(activities) > 0:
         ids = list(map(lambda a: str(a.get("activityId", "")), activities))
         print("Syncing Activity IDs")
-        return ids + await get_activity_id_list(client, start + 100)
+        return ids + await get_activity_id_list(client, start + 100, activity_type)
     else:
         return []
 
@@ -384,7 +399,7 @@ async def download_new_activities(
             for id in to_generate_garmin_ids
         ],
     )
-    print(f"Download finished. Elapsed {time.time()-start_time} seconds")
+    print(f"Download finished. Elapsed {time.time() - start_time} seconds")
 
     await client.req.aclose()
     return to_generate_garmin_ids, to_generate_garmin_id2title
