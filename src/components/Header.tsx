@@ -1,12 +1,10 @@
-import type { Activity } from '../types';
 import { useLocale } from '../hooks/useLocale';
 
-type Page = 'home' | 'tracks';
+export type Page = 'summary' | 'tracks';
 
 interface HeaderProps {
   dark: boolean;
   toggleTheme: () => void;
-  activities: Activity[];
   page: Page;
   onNavigate: (p: Page) => void;
 }
@@ -15,7 +13,7 @@ export function Header({ dark, toggleTheme, page, onNavigate }: HeaderProps) {
   const { locale, setLocale, t } = useLocale();
 
   const navItems: { label: string; page: Page }[] = [
-    { label: t('home'), page: 'home' },
+    { label: t('summary'), page: 'summary' },
     { label: t('tracks'), page: 'tracks' },
   ];
 
@@ -87,7 +85,7 @@ export function Header({ dark, toggleTheme, page, onNavigate }: HeaderProps) {
             {locale === 'zh' ? 'EN' : '中'}
           </button>
           <a
-            href="https://github.com/yihong0618/running_page"
+            href="https://github.com/qzwlecr/running_page"
             target="_blank"
             rel="noopener noreferrer"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-muted)] transition-colors hover:bg-[var(--color-card)] hover:text-[var(--color-text)]"

@@ -1,5 +1,5 @@
 import './index.css';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Activity } from '@/types';
 import {
   useFilteredActivities,
@@ -8,7 +8,7 @@ import {
   getActivityData,
 } from '@/hooks/useActivities';
 import { useTheme } from '@/hooks/useTheme';
-import { Header } from '@/components/Header';
+import { Header, type Page } from '@/components/Header';
 import { StatsCards } from '@/components/StatsCards';
 import { ContributionHeatmap } from '@/components/ContributionHeatmap';
 import { ActivityLog } from '@/components/ActivityLog';
@@ -19,7 +19,15 @@ import { PersonalBest } from '@/components/PersonalBest';
 import { TracksPage } from '@/components/TracksPage';
 import { ChinaMap } from '@/components/ChinaMap';
 
-type Page = 'home' | 'tracks';
+const getPageFromPath = (): Page =>
+  window.location.pathname.replace(/\/$/, '').endsWith('/tracks')
+    ? 'tracks'
+    : 'summary';
+
+const getPagePath = (page: Page): string => {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  return `${basePath}/${page}`;
+};
 
 function Dashboard() {
   const activities = getActivityData() as Activity[];
@@ -30,7 +38,21 @@ function Dashboard() {
     null
   );
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(getPageFromPath);
+
+  const navigate = useCallback((nextPage: Page) => {
+    const nextPath = getPagePath(nextPage);
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState(null, '', nextPath);
+    }
+    setPage(nextPage);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => setPage(getPageFromPath());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const years = getAvailableYears(activities);
   const filtered = useFilteredActivities(activities, filter, year);
@@ -49,9 +71,8 @@ function Dashboard() {
       <Header
         dark={dark}
         toggleTheme={toggle}
-        activities={activities}
         page={page}
-        onNavigate={setPage}
+        onNavigate={navigate}
       />
 
       {page === 'tracks' ? (
@@ -59,7 +80,7 @@ function Dashboard() {
           activities={filtered}
           filter={filter}
           onSelectActivity={setSelectedActivity}
-          onBack={() => setPage('home')}
+          onBack={() => navigate('summary')}
         />
       ) : (
         <main className="mx-auto max-w-[1400px] px-6 py-6">
