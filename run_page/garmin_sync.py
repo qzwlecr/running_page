@@ -312,20 +312,58 @@ async def download_garmin_data(
         traceback.print_exc()
 
 
-async def get_activity_id_list(client, start=0, activity_type=None):
+def add_activity_title(activity, activity_title_dict):
+    """Index a Garmin activity title by both Garmin ID and local DB run ID."""
+    activity_id = str(activity.get("activityId", ""))
+    activity_title = activity.get("activityName")
+    if not activity_id or activity_title is None:
+        return
+
+    activity_title_dict[activity_id] = str(activity_title)
+
+    start_time_gmt = activity.get("startTimeGMT")
+    if not start_time_gmt:
+        return
+
+    try:
+        start_time = dt.datetime.fromisoformat(
+            str(start_time_gmt).replace("Z", "+00:00")
+        )
+        if start_time.tzinfo is None:
+            start_time = start_time.replace(tzinfo=dt.timezone.utc)
+        run_id = int(start_time.timestamp() * 1000)
+        activity_title_dict[str(run_id)] = str(activity_title)
+    except (TypeError, ValueError) as e:
+        print(f"Failed to parse activity start time {activity_id}: {str(e)}")
+
+
+async def get_activity_id_list(
+    client, start=0, activity_type=None, activity_title_dict=None
+):
+    if activity_title_dict is None:
+        activity_title_dict = {}
+
     if client.is_only_running and activity_type is None:
         activity_ids = []
         for garmin_activity_type in GARMIN_ONLY_RUN_ACTIVITY_TYPES:
             activity_ids.extend(
-                await get_activity_id_list(client, activity_type=garmin_activity_type)
+                await get_activity_id_list(
+                    client,
+                    activity_type=garmin_activity_type,
+                    activity_title_dict=activity_title_dict,
+                )
             )
         return list(dict.fromkeys(activity_ids))
 
     activities = await client.get_activities(start, 100, activity_type=activity_type)
     if len(activities) > 0:
+        for activity in activities:
+            add_activity_title(activity, activity_title_dict)
         ids = list(map(lambda a: str(a.get("activityId", "")), activities))
         print("Syncing Activity IDs")
-        return ids + await get_activity_id_list(client, start + 100, activity_type)
+        return ids + await get_activity_id_list(
+            client, start + 100, activity_type, activity_title_dict
+        )
     else:
         return []
 
@@ -371,17 +409,28 @@ async def download_new_activities(
     client = Garmin(secret_string, auth_domain, is_only_running)
     # because I don't find a para for after time, so I use garmin-id as filename
     # to find new run to generate
-    activity_ids = await get_activity_id_list(client)
+    activity_id2title = {}
+    activity_ids = await get_activity_id_list(
+        client, activity_title_dict=activity_id2title
+    )
     to_generate_garmin_ids = list(set(activity_ids) - set(downloaded_ids))
     print(f"{len(to_generate_garmin_ids)} new activities to be downloaded")
 
-    to_generate_garmin_id2title = {}
     garmin_summary_infos_dict = {}
     for id in to_generate_garmin_ids:
         try:
             activity_summary = await client.get_activity_summary(id)
             activity_title = activity_summary.get("activityName", "")
-            to_generate_garmin_id2title[id] = activity_title
+            activity_id2title[id] = activity_title
+            summary_dto = activity_summary.get("summaryDTO") or {}
+            add_activity_title(
+                {
+                    "activityId": id,
+                    "activityName": activity_title,
+                    "startTimeGMT": summary_dto.get("startTimeGMT"),
+                },
+                activity_id2title,
+            )
             garmin_summary_infos_dict[id] = get_garmin_summary_infos(
                 activity_summary, id
             )
@@ -402,7 +451,7 @@ async def download_new_activities(
     print(f"Download finished. Elapsed {time.time()-start_time} seconds")
 
     await client.req.aclose()
-    return to_generate_garmin_ids, to_generate_garmin_id2title
+    return to_generate_garmin_ids, activity_id2title
 
 
 if __name__ == "__main__":

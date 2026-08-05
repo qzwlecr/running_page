@@ -232,6 +232,23 @@ class Generator:
 
         self.session.commit()
 
+    def update_activity_titles(self, activity_title_dict):
+        """Refresh names without reprocessing already-synced activity files."""
+        if not activity_title_dict:
+            return 0
+
+        updated = 0
+        for activity in self.session.query(Activity).all():
+            title = activity_title_dict.get(str(activity.run_id))
+            if title is not None and activity.name != title:
+                activity.name = title
+                updated += 1
+
+        if updated:
+            self.session.commit()
+        print(f"Refreshed {updated} activity titles")
+        return updated
+
     def load(self):
         # if sub_type is not in the db, just add an empty string to it
         query = self.session.query(Activity).filter(Activity.distance > 0.1)
