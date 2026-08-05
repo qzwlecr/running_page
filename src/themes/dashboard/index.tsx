@@ -38,6 +38,7 @@ function Dashboard() {
     null
   );
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
+  const [activityLogScrollRequest, setActivityLogScrollRequest] = useState(0);
   const [page, setPage] = useState<Page>(getPageFromPath);
 
   const navigate = useCallback((nextPage: Page) => {
@@ -65,6 +66,22 @@ function Dashboard() {
       (a) => extractProvince(a.location_country) === selectedProvince
     );
   }, [filtered, selectedProvince]);
+
+  const selectPersonalBest = useCallback(
+    (activity: Activity | null) => {
+      if (!activity) return;
+      setYear(null);
+      setSelectedProvince(null);
+      setSelectedActivity(activity);
+      setActivityLogScrollRequest((request) => request + 1);
+    },
+    [
+      setActivityLogScrollRequest,
+      setSelectedActivity,
+      setSelectedProvince,
+      setYear,
+    ]
+  );
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)]" data-filter={filter}>
@@ -108,6 +125,7 @@ function Dashboard() {
                 selectedActivity={selectedActivity}
                 onSelectActivity={setSelectedActivity}
                 filter={filter}
+                scrollRequest={activityLogScrollRequest}
               />
             </div>
 
@@ -131,7 +149,7 @@ function Dashboard() {
               />
               <PersonalBest
                 activities={activities}
-                onSelectActivity={setSelectedActivity}
+                onSelectActivity={selectPersonalBest}
               />
               <CalendarWidget
                 activities={filtered}

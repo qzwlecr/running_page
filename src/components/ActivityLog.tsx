@@ -11,6 +11,7 @@ interface ActivityLogProps {
   selectedActivity?: Activity | null;
   onSelectActivity?: (a: Activity | null) => void;
   filter?: SportFilter;
+  scrollRequest?: number;
 }
 
 const PAGE_SIZE = 16;
@@ -32,6 +33,7 @@ export function ActivityLog({
   selectedActivity,
   onSelectActivity,
   filter = 'all',
+  scrollRequest = 0,
 }: ActivityLogProps) {
   const { t } = useLocale();
   const [page, setPage] = useState(0);
@@ -69,6 +71,16 @@ export function ActivityLog({
     // `sorted` is in deps so the page refreshes when the list changes (year/filter switch)
     // even if the selected run_id stays the same — avoids stale closure. M6 fix.
   }, [selectedActivity?.run_id, sorted]);
+
+  useEffect(() => {
+    if (!scrollRequest || !selectedActivity) return;
+    const frame = requestAnimationFrame(() => {
+      document
+        .getElementById(`activity-${selectedActivity.run_id}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activities, distFilter, page, scrollRequest, selectedActivity]);
 
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   const pageData = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -151,6 +163,7 @@ export function ActivityLog({
             {pageData.map((a) => (
               <tr
                 key={a.run_id}
+                id={`activity-${a.run_id}`}
                 onClick={() =>
                   onSelectActivity?.(
                     selectedActivity?.run_id === a.run_id ? null : a

@@ -23,7 +23,8 @@ type BestTimeField =
   | 'best_1600m_time'
   | 'best_2k_time'
   | 'best_5k_time'
-  | 'best_10k_time';
+  | 'best_10k_time'
+  | 'best_half_marathon_time';
 
 type PersonalBestDistance =
   | {
@@ -77,7 +78,12 @@ const DISTANCES: PersonalBestDistance[] = [
     targetKm: 10,
     minPaceSeconds: 180,
   },
-  { key: 'Half Marathon', min: 20, max: 22.5 },
+  {
+    key: 'Half Marathon',
+    bestTimeField: 'best_half_marathon_time',
+    targetKm: 21.0975,
+    minPaceSeconds: 180,
+  },
   { key: 'Marathon', min: 41, max: 44 },
 ];
 

@@ -37,6 +37,7 @@ BEST_EFFORT_FIELDS = (
     "best_2k_time",
     "best_5k_time",
     "best_10k_time",
+    "best_half_marathon_time",
 )
 
 
@@ -82,6 +83,7 @@ class Activity(Base):
     best_2k_time = Column(Float)
     best_5k_time = Column(Float)
     best_10k_time = Column(Float)
+    best_half_marathon_time = Column(Float)
     streak = None
 
     def to_dict(self):
@@ -167,6 +169,9 @@ def update_or_create_activity(session, run_activity):
                 best_2k_time=getattr(run_activity, "best_2k_time", None),
                 best_5k_time=getattr(run_activity, "best_5k_time", None),
                 best_10k_time=getattr(run_activity, "best_10k_time", None),
+                best_half_marathon_time=getattr(
+                    run_activity, "best_half_marathon_time", None
+                ),
                 summary_polyline=(
                     run_activity.map and run_activity.map.summary_polyline or ""
                 ),

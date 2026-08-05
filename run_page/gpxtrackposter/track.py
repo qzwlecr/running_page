@@ -45,6 +45,7 @@ BEST_EFFORT_DISTANCES = {
     "best_2k_time": 2000,
     "best_5k_time": 5000,
     "best_10k_time": 10000,
+    "best_half_marathon_time": 21097.5,
 }
 
 

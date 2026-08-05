@@ -37,6 +37,12 @@ def test_fastest_distance_supports_short_personal_bests(distance, expected_time)
     )
 
 
+def test_fastest_distance_supports_half_marathon_personal_best():
+    records = make_records([0, 25000], [0, 7500])
+
+    assert calculate_fastest_distance_time(records, 21097.5) == pytest.approx(6329.25)
+
+
 def test_fastest_distance_does_not_cross_a_distance_reset():
     records = make_records(
         [0, 3000, 0, 3000],

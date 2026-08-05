@@ -19,6 +19,7 @@ export interface Activity {
   best_2k_time?: number | null; // seconds, estimated from FIT records
   best_5k_time?: number | null; // seconds, estimated from FIT records
   best_10k_time?: number | null; // seconds, estimated from FIT records
+  best_half_marathon_time?: number | null; // seconds, estimated from FIT records
   source: string;
   streak: number;
 }
