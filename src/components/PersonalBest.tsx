@@ -16,9 +16,16 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-const DISTANCES = [
-  { key: '5K', min: 4.8, max: 5.5 },
-  { key: '10K', min: 9.5, max: 11 },
+type BestTimeField = 'best_5k_time' | 'best_10k_time';
+
+const DISTANCES: Array<{
+  key: string;
+  min: number;
+  max: number;
+  bestTimeField?: BestTimeField;
+}> = [
+  { key: '5K', min: 4.8, max: 5.5, bestTimeField: 'best_5k_time' },
+  { key: '10K', min: 9.5, max: 11, bestTimeField: 'best_10k_time' },
   { key: 'Half Marathon', min: 20, max: 22.5 },
   { key: 'Marathon', min: 41, max: 44 },
 ];
@@ -50,7 +57,23 @@ export function PersonalBest({
           Marathon: 'Marathon',
         };
 
-  const bests = DISTANCES.map(({ key, min, max }) => {
+  const bests = DISTANCES.map(({ key, min, max, bestTimeField }) => {
+    if (bestTimeField) {
+      const targetKm = key === '5K' ? 5 : 10;
+      const matching = activities.filter((a) => {
+        const time = a[bestTimeField];
+        if (a.type !== 'Run' || typeof time !== 'number' || time <= 0)
+          return false;
+        const pacePerKm = time / targetKm;
+        return pacePerKm >= 180 && pacePerKm <= 480;
+      });
+      if (matching.length === 0) return { key, activity: null, time: 0 };
+      const best = matching.reduce((b, a) =>
+        a[bestTimeField]! < b[bestTimeField]! ? a : b
+      );
+      return { key, activity: best, time: best[bestTimeField]! };
+    }
+
     const matching = runs.filter((a) => {
       const km = a.distance / 1000;
       if (km < min || km > max) return false;

@@ -9,4 +9,5 @@ from utils import make_activities_file
 
 if __name__ == "__main__":
     print("only sync fit files in FIT_OUT")
-    make_activities_file(SQL_FILE, FIT_FOLDER, JSON_FILE, "fit")
+    # Re-read existing FIT files so newly added analysis fields are backfilled.
+    make_activities_file(SQL_FILE, FIT_FOLDER, JSON_FILE, "fit", include_synced=True)

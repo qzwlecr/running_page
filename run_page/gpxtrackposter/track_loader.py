@@ -75,9 +75,20 @@ class TrackLoader:
             "fit": load_fit_file,
         }
 
-    def load_tracks(self, data_dir, file_suffix="gpx", activity_title_dict={}):
+    def load_tracks(
+        self,
+        data_dir,
+        file_suffix="gpx",
+        activity_title_dict={},
+        include_synced=False,
+    ):
         """Load tracks data_dir and return as a List of tracks"""
-        file_names = [x for x in self._list_data_files(data_dir, file_suffix)]
+        file_names = [
+            x
+            for x in self._list_data_files(
+                data_dir, file_suffix, include_synced=include_synced
+            )
+        ]
         print(f"{file_suffix.upper()} files: {len(file_names)}")
 
         tracks = []
@@ -154,7 +165,7 @@ class TrackLoader:
         return tracks
 
     @staticmethod
-    def _list_data_files(data_dir, file_suffix):
+    def _list_data_files(data_dir, file_suffix, include_synced=False):
         synced_files = load_synced_file_list()
         data_dir = os.path.abspath(data_dir)
         if not os.path.isdir(data_dir):
@@ -162,7 +173,7 @@ class TrackLoader:
         for name in os.listdir(data_dir):
             if name.startswith("."):
                 continue
-            if name in synced_files:
+            if not include_synced and name in synced_files:
                 continue
             path_name = os.path.join(data_dir, name)
             if name.endswith(f".{file_suffix}") and os.path.isfile(path_name):

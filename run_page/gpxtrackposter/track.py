@@ -6,9 +6,11 @@
 # license that can be found in the LICENSE file.
 
 import datetime
-from datetime import timezone
+import math
 import os
+from bisect import bisect_left, bisect_right
 from collections import namedtuple
+from datetime import timezone
 
 import gpxpy as mod_gpxpy
 import lxml
@@ -21,7 +23,7 @@ from rich import print
 from tcxreader.tcxreader import TCXReader
 
 from .exceptions import TrackLoadError
-from .utils import parse_datetime_to_local, get_normalized_sport_type
+from .utils import get_normalized_sport_type, parse_datetime_to_local
 
 start_point = namedtuple("start_point", "lat lon")
 run_map = namedtuple("polyline", "summary_polyline")
@@ -34,6 +36,102 @@ IGNORE_BEFORE_SAVING = os.getenv("IGNORE_BEFORE_SAVING", False)
 # And to represent values up to 360° (or -180° to 180°), each 'degree' represents 2^32 / 360 = 11930465.
 # So dividing latitude and longitude (int32) value by 11930465 will give the decimal value.
 SEMICIRCLE = 11930465
+
+
+def calculate_fastest_distance_time(records, target_distance):
+    """Estimate the fastest time for a distance from FIT record samples.
+
+    FIT records contain cumulative distance and timestamps.  The exact time at
+    the target-distance boundary is linearly interpolated between samples.  We
+    evaluate intervals anchored at both their start and end samples so a pace
+    change at either boundary is considered.
+    """
+
+    segments = []
+    segment = []
+    previous_distance = None
+    previous_timestamp = None
+
+    for record in records:
+        distance = record.get("distance")
+        timestamp = record.get("timestamp")
+        if not isinstance(distance, (int, float)) or not isinstance(
+            timestamp, (int, float)
+        ):
+            continue
+        if not math.isfinite(distance) or not math.isfinite(timestamp):
+            continue
+
+        distance = float(distance)
+        timestamp = float(timestamp)
+        if previous_timestamp is not None and (
+            timestamp <= previous_timestamp or distance < previous_distance
+        ):
+            if segment:
+                segments.append(segment)
+            segment = []
+
+        segment.append((distance, timestamp))
+        previous_distance = distance
+        previous_timestamp = timestamp
+
+    if segment:
+        segments.append(segment)
+
+    best_time = None
+    for points in segments:
+        if len(points) < 2 or points[-1][0] - points[0][0] < target_distance:
+            continue
+
+        distances = [point[0] for point in points]
+
+        # Anchor the start at every sample and interpolate the end boundary.
+        for start_index, (start_distance, start_time) in enumerate(points):
+            end_distance = start_distance + target_distance
+            end_index = bisect_left(distances, end_distance, start_index + 1)
+            if end_index >= len(points):
+                break
+            end_time = _interpolate_fit_timestamp(
+                points, distances, end_index, end_distance
+            )
+            duration = end_time - start_time
+            if duration > 0 and (best_time is None or duration < best_time):
+                best_time = duration
+
+        # Anchor the end at every sample and interpolate the start boundary.
+        for end_index, (end_distance, end_time) in enumerate(points):
+            start_distance = end_distance - target_distance
+            if start_distance < distances[0]:
+                continue
+            start_index = bisect_right(distances, start_distance, 0, end_index) - 1
+            if start_index < 0:
+                continue
+            if distances[start_index] == start_distance:
+                start_time = points[start_index][1]
+            else:
+                start_time = _interpolate_fit_timestamp(
+                    points, distances, start_index + 1, start_distance
+                )
+            duration = end_time - start_time
+            if duration > 0 and (best_time is None or duration < best_time):
+                best_time = duration
+
+    return best_time
+
+
+def _interpolate_fit_timestamp(points, distances, upper_index, target_distance):
+    """Interpolate a timestamp at target_distance within adjacent FIT records."""
+
+    upper_distance, upper_time = points[upper_index]
+    if upper_distance == target_distance:
+        return upper_time
+
+    lower_distance, lower_time = points[upper_index - 1]
+    distance_delta = upper_distance - lower_distance
+    if distance_delta <= 0:
+        return upper_time
+    fraction = (target_distance - lower_distance) / distance_delta
+    return lower_time + (upper_time - lower_time) * fraction
 
 
 class Track:
@@ -56,6 +154,8 @@ class Track:
         self.type = "Run"
         self.subtype = None  # for fit file
         self.device = ""
+        self.best_5k_time = None
+        self.best_10k_time = None
 
     def load_gpx(self, file_name):
         """
@@ -140,6 +240,8 @@ class Track:
         self.run_id = activity.run_id
         self.type = get_normalized_sport_type(activity.type)
         self.subtype = activity.subtype if hasattr(activity, "subtype") else None
+        self.best_5k_time = getattr(activity, "best_5k_time", None)
+        self.best_10k_time = getattr(activity, "best_10k_time", None)
         # Load moving_dict from database
         self.moving_dict = {
             "distance": self.length,
@@ -411,6 +513,10 @@ class Track:
         self.elevation_gain = (
             message["total_ascent"] if "total_ascent" in message else 0
         )
+        if self.type == "Run":
+            records = fit.get("record_mesgs", [])
+            self.best_5k_time = calculate_fastest_distance_time(records, 5000)
+            self.best_10k_time = calculate_fastest_distance_time(records, 10000)
         for record in fit["record_mesgs"]:
             if "position_lat" in record and "position_long" in record:
                 lat = record["position_lat"] / SEMICIRCLE
@@ -559,6 +665,9 @@ class Track:
             "map": run_map(self.polyline_str),
             "start_latlng": self.start_latlng,
         }
+        if run_from == "fit":
+            d["best_5k_time"] = self.best_5k_time
+            d["best_10k_time"] = self.best_10k_time
         d.update(self.moving_dict)
         # return a nametuple that can use . to get attr
         return namedtuple("x", d.keys())(*d.values())

@@ -187,10 +187,19 @@ class Generator:
             sys.stdout.flush()
         self.session.commit()
 
-    def sync_from_data_dir(self, data_dir, file_suffix="gpx", activity_title_dict={}):
+    def sync_from_data_dir(
+        self,
+        data_dir,
+        file_suffix="gpx",
+        activity_title_dict={},
+        include_synced=False,
+    ):
         loader = track_loader.TrackLoader()
         tracks = loader.load_tracks(
-            data_dir, file_suffix=file_suffix, activity_title_dict=activity_title_dict
+            data_dir,
+            file_suffix=file_suffix,
+            activity_title_dict=activity_title_dict,
+            include_synced=include_synced,
         )
         print(f"load {len(tracks)} tracks")
         if not tracks:
@@ -263,7 +272,8 @@ class Generator:
         for activity in activities:
             # Determine running streak.
             date = datetime.datetime.strptime(
-                activity.start_date_local, "%Y-%m-%d %H:%M:%S"  # type: ignore
+                activity.start_date_local,
+                "%Y-%m-%d %H:%M:%S",  # type: ignore
             ).date()
             if last_date is None:
                 streak = 1

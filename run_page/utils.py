@@ -50,12 +50,20 @@ def to_date(ts):
 
 
 def make_activities_file(
-    sql_file, data_dir, json_file, file_suffix="gpx", activity_title_dict=None
+    sql_file,
+    data_dir,
+    json_file,
+    file_suffix="gpx",
+    activity_title_dict=None,
+    include_synced=False,
 ):
     activity_title_dict = activity_title_dict or {}
     generator = Generator(sql_file)
     generator.sync_from_data_dir(
-        data_dir, file_suffix=file_suffix, activity_title_dict=activity_title_dict
+        data_dir,
+        file_suffix=file_suffix,
+        activity_title_dict=activity_title_dict,
+        include_synced=include_synced,
     )
     generator.update_activity_titles(activity_title_dict)
     activities_list = generator.load()

@@ -44,6 +44,8 @@ ACTIVITY_KEYS = [
     "average_heartrate",
     "average_speed",
     "elevation_gain",
+    "best_5k_time",
+    "best_10k_time",
 ]
 
 
@@ -64,6 +66,8 @@ class Activity(Base):
     average_heartrate = Column(Float)
     average_speed = Column(Float)
     elevation_gain = Column(Float)
+    best_5k_time = Column(Float)
+    best_10k_time = Column(Float)
     streak = None
 
     def to_dict(self):
@@ -142,6 +146,8 @@ def update_or_create_activity(session, run_activity):
                 average_heartrate=run_activity.average_heartrate,
                 average_speed=float(run_activity.average_speed),
                 elevation_gain=current_elevation_gain,
+                best_5k_time=getattr(run_activity, "best_5k_time", None),
+                best_10k_time=getattr(run_activity, "best_10k_time", None),
                 summary_polyline=(
                     run_activity.map and run_activity.map.summary_polyline or ""
                 ),
@@ -158,6 +164,10 @@ def update_or_create_activity(session, run_activity):
             activity.average_heartrate = run_activity.average_heartrate
             activity.average_speed = float(run_activity.average_speed)
             activity.elevation_gain = current_elevation_gain
+            if hasattr(run_activity, "best_5k_time"):
+                activity.best_5k_time = run_activity.best_5k_time
+            if hasattr(run_activity, "best_10k_time"):
+                activity.best_10k_time = run_activity.best_10k_time
             activity.summary_polyline = (
                 run_activity.map and run_activity.map.summary_polyline or ""
             )
