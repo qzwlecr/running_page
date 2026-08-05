@@ -12,6 +12,11 @@ export interface Activity {
   average_heartrate: number | null;
   average_speed: number; // m/s
   elevation_gain: number | null;
+  best_400m_time?: number | null; // seconds, estimated from FIT records
+  best_800m_time?: number | null; // seconds, estimated from FIT records
+  best_1k_time?: number | null; // seconds, estimated from FIT records
+  best_1600m_time?: number | null; // seconds, estimated from FIT records
+  best_2k_time?: number | null; // seconds, estimated from FIT records
   best_5k_time?: number | null; // seconds, estimated from FIT records
   best_10k_time?: number | null; // seconds, estimated from FIT records
   source: string;

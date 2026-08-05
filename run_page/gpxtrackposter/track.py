@@ -37,6 +37,16 @@ IGNORE_BEFORE_SAVING = os.getenv("IGNORE_BEFORE_SAVING", False)
 # So dividing latitude and longitude (int32) value by 11930465 will give the decimal value.
 SEMICIRCLE = 11930465
 
+BEST_EFFORT_DISTANCES = {
+    "best_400m_time": 400,
+    "best_800m_time": 800,
+    "best_1k_time": 1000,
+    "best_1600m_time": 1600,
+    "best_2k_time": 2000,
+    "best_5k_time": 5000,
+    "best_10k_time": 10000,
+}
+
 
 def calculate_fastest_distance_time(records, target_distance):
     """Estimate the fastest time for a distance from FIT record samples.
@@ -154,8 +164,8 @@ class Track:
         self.type = "Run"
         self.subtype = None  # for fit file
         self.device = ""
-        self.best_5k_time = None
-        self.best_10k_time = None
+        for field in BEST_EFFORT_DISTANCES:
+            setattr(self, field, None)
 
     def load_gpx(self, file_name):
         """
@@ -240,8 +250,8 @@ class Track:
         self.run_id = activity.run_id
         self.type = get_normalized_sport_type(activity.type)
         self.subtype = activity.subtype if hasattr(activity, "subtype") else None
-        self.best_5k_time = getattr(activity, "best_5k_time", None)
-        self.best_10k_time = getattr(activity, "best_10k_time", None)
+        for field in BEST_EFFORT_DISTANCES:
+            setattr(self, field, getattr(activity, field, None))
         # Load moving_dict from database
         self.moving_dict = {
             "distance": self.length,
@@ -515,8 +525,12 @@ class Track:
         )
         if self.type == "Run":
             records = fit.get("record_mesgs", [])
-            self.best_5k_time = calculate_fastest_distance_time(records, 5000)
-            self.best_10k_time = calculate_fastest_distance_time(records, 10000)
+            for field, distance in BEST_EFFORT_DISTANCES.items():
+                setattr(
+                    self,
+                    field,
+                    calculate_fastest_distance_time(records, distance),
+                )
         for record in fit["record_mesgs"]:
             if "position_lat" in record and "position_long" in record:
                 lat = record["position_lat"] / SEMICIRCLE
@@ -666,8 +680,7 @@ class Track:
             "start_latlng": self.start_latlng,
         }
         if run_from == "fit":
-            d["best_5k_time"] = self.best_5k_time
-            d["best_10k_time"] = self.best_10k_time
+            d.update({field: getattr(self, field) for field in BEST_EFFORT_DISTANCES})
         d.update(self.moving_dict)
         # return a nametuple that can use . to get attr
         return namedtuple("x", d.keys())(*d.values())

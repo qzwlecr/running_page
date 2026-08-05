@@ -29,6 +29,16 @@ options.default_user_agent = "running_page"
 # reverse the location (lat, lon) -> location detail
 g = Nominatim(user_agent=randomword())
 
+BEST_EFFORT_FIELDS = (
+    "best_400m_time",
+    "best_800m_time",
+    "best_1k_time",
+    "best_1600m_time",
+    "best_2k_time",
+    "best_5k_time",
+    "best_10k_time",
+)
+
 
 ACTIVITY_KEYS = [
     "run_id",
@@ -44,8 +54,7 @@ ACTIVITY_KEYS = [
     "average_heartrate",
     "average_speed",
     "elevation_gain",
-    "best_5k_time",
-    "best_10k_time",
+    *BEST_EFFORT_FIELDS,
 ]
 
 
@@ -66,6 +75,11 @@ class Activity(Base):
     average_heartrate = Column(Float)
     average_speed = Column(Float)
     elevation_gain = Column(Float)
+    best_400m_time = Column(Float)
+    best_800m_time = Column(Float)
+    best_1k_time = Column(Float)
+    best_1600m_time = Column(Float)
+    best_2k_time = Column(Float)
     best_5k_time = Column(Float)
     best_10k_time = Column(Float)
     streak = None
@@ -146,6 +160,11 @@ def update_or_create_activity(session, run_activity):
                 average_heartrate=run_activity.average_heartrate,
                 average_speed=float(run_activity.average_speed),
                 elevation_gain=current_elevation_gain,
+                best_400m_time=getattr(run_activity, "best_400m_time", None),
+                best_800m_time=getattr(run_activity, "best_800m_time", None),
+                best_1k_time=getattr(run_activity, "best_1k_time", None),
+                best_1600m_time=getattr(run_activity, "best_1600m_time", None),
+                best_2k_time=getattr(run_activity, "best_2k_time", None),
                 best_5k_time=getattr(run_activity, "best_5k_time", None),
                 best_10k_time=getattr(run_activity, "best_10k_time", None),
                 summary_polyline=(
@@ -164,10 +183,9 @@ def update_or_create_activity(session, run_activity):
             activity.average_heartrate = run_activity.average_heartrate
             activity.average_speed = float(run_activity.average_speed)
             activity.elevation_gain = current_elevation_gain
-            if hasattr(run_activity, "best_5k_time"):
-                activity.best_5k_time = run_activity.best_5k_time
-            if hasattr(run_activity, "best_10k_time"):
-                activity.best_10k_time = run_activity.best_10k_time
+            for field in BEST_EFFORT_FIELDS:
+                if hasattr(run_activity, field):
+                    setattr(activity, field, getattr(run_activity, field))
             activity.summary_polyline = (
                 run_activity.map and run_activity.map.summary_polyline or ""
             )

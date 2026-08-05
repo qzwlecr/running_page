@@ -16,16 +16,67 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-type BestTimeField = 'best_5k_time' | 'best_10k_time';
+type BestTimeField =
+  | 'best_400m_time'
+  | 'best_800m_time'
+  | 'best_1k_time'
+  | 'best_1600m_time'
+  | 'best_2k_time'
+  | 'best_5k_time'
+  | 'best_10k_time';
 
-const DISTANCES: Array<{
-  key: string;
-  min: number;
-  max: number;
-  bestTimeField?: BestTimeField;
-}> = [
-  { key: '5K', min: 4.8, max: 5.5, bestTimeField: 'best_5k_time' },
-  { key: '10K', min: 9.5, max: 11, bestTimeField: 'best_10k_time' },
+type PersonalBestDistance =
+  | {
+      key: string;
+      bestTimeField: BestTimeField;
+      targetKm: number;
+      minPaceSeconds: number;
+    }
+  | { key: string; min: number; max: number };
+
+const DISTANCES: PersonalBestDistance[] = [
+  {
+    key: '400M',
+    bestTimeField: 'best_400m_time',
+    targetKm: 0.4,
+    minPaceSeconds: 90,
+  },
+  {
+    key: '800M',
+    bestTimeField: 'best_800m_time',
+    targetKm: 0.8,
+    minPaceSeconds: 90,
+  },
+  {
+    key: '1K',
+    bestTimeField: 'best_1k_time',
+    targetKm: 1,
+    minPaceSeconds: 90,
+  },
+  {
+    key: '1.6K',
+    bestTimeField: 'best_1600m_time',
+    targetKm: 1.6,
+    minPaceSeconds: 90,
+  },
+  {
+    key: '2K',
+    bestTimeField: 'best_2k_time',
+    targetKm: 2,
+    minPaceSeconds: 90,
+  },
+  {
+    key: '5K',
+    bestTimeField: 'best_5k_time',
+    targetKm: 5,
+    minPaceSeconds: 180,
+  },
+  {
+    key: '10K',
+    bestTimeField: 'best_10k_time',
+    targetKm: 10,
+    minPaceSeconds: 180,
+  },
   { key: 'Half Marathon', min: 20, max: 22.5 },
   { key: 'Marathon', min: 41, max: 44 },
 ];
@@ -45,27 +96,38 @@ export function PersonalBest({
   const labels: Record<string, string> =
     locale === 'zh'
       ? {
+          '400M': '400米',
+          '800M': '800米',
+          '1K': '1公里',
+          '1.6K': '1.6公里',
+          '2K': '2公里',
           '5K': '5公里',
           '10K': '10公里',
           'Half Marathon': '半程马拉松',
           Marathon: '全程马拉松',
         }
       : {
+          '400M': '400m',
+          '800M': '800m',
+          '1K': '1K',
+          '1.6K': '1.6K',
+          '2K': '2K',
           '5K': '5K',
           '10K': '10K',
           'Half Marathon': 'Half Marathon',
           Marathon: 'Marathon',
         };
 
-  const bests = DISTANCES.map(({ key, min, max, bestTimeField }) => {
-    if (bestTimeField) {
-      const targetKm = key === '5K' ? 5 : 10;
+  const bests = DISTANCES.map((distance) => {
+    const { key } = distance;
+    if ('bestTimeField' in distance) {
+      const { bestTimeField, targetKm, minPaceSeconds } = distance;
       const matching = activities.filter((a) => {
         const time = a[bestTimeField];
         if (a.type !== 'Run' || typeof time !== 'number' || time <= 0)
           return false;
         const pacePerKm = time / targetKm;
-        return pacePerKm >= 180 && pacePerKm <= 480;
+        return pacePerKm >= minPaceSeconds && pacePerKm <= 480;
       });
       if (matching.length === 0) return { key, activity: null, time: 0 };
       const best = matching.reduce((b, a) =>
@@ -74,6 +136,7 @@ export function PersonalBest({
       return { key, activity: best, time: best[bestTimeField]! };
     }
 
+    const { min, max } = distance;
     const matching = runs.filter((a) => {
       const km = a.distance / 1000;
       if (km < min || km > max) return false;

@@ -25,6 +25,18 @@ def test_fastest_distance_uses_best_section_with_interpolated_boundary():
     assert calculate_fastest_distance_time(records, 10000) == pytest.approx(2900)
 
 
+@pytest.mark.parametrize(
+    ("distance", "expected_time"),
+    [(400, 100), (800, 200), (1000, 250), (1600, 400), (2000, 500)],
+)
+def test_fastest_distance_supports_short_personal_bests(distance, expected_time):
+    records = make_records([0, 1000, 2000], [0, 250, 500])
+
+    assert calculate_fastest_distance_time(records, distance) == pytest.approx(
+        expected_time
+    )
+
+
 def test_fastest_distance_does_not_cross_a_distance_reset():
     records = make_records(
         [0, 3000, 0, 3000],
