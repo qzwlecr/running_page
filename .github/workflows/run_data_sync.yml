@@ -13,6 +13,11 @@ on:
       - run_page/strava_sync.py
       - run_page/gen_svg.py
       - run_page/garmin_sync.py
+      - run_page/fit_sync.py
+      - run_page/generator/**
+      - run_page/gpxtrackposter/**
+      - run_page/synced_data_file_logger.py
+      - run_page/utils.py
       - run_page/coros_sync.py
       - run_page/keep_sync.py
       - run_page/gpx_sync.py
@@ -22,6 +27,8 @@ on:
       - run_page/keep_to_strava_sync.py
       - run_page/oppo_sync.py
       - run_page/intervals_icu_sync.py
+      - src/components/PersonalBest.tsx
+      - src/core/types.ts
       - requirements.txt
 
 env:

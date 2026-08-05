@@ -532,5 +532,12 @@ if __name__ == "__main__":
             activity_title_dict=id2title,
         )
     make_activities_file(
-        SQL_FILE, folder, JSON_FILE, file_suffix=file_type, activity_title_dict=id2title
+        SQL_FILE,
+        folder,
+        JSON_FILE,
+        file_suffix=file_type,
+        activity_title_dict=id2title,
+        # FIT analysis fields may be added after an activity was first imported.
+        # Re-read cached FIT files so historical personal bests are backfilled.
+        include_synced=file_type == "fit",
     )
