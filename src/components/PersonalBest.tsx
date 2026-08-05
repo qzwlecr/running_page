@@ -35,6 +35,18 @@ type PersonalBestDistance =
     }
   | { key: string; min: number; max: number };
 
+const INDOOR_RUNNING_SUBTYPES = new Set([
+  'indoor',
+  'indoorrunning',
+  'treadmill',
+  'virtualrun',
+]);
+
+function isIndoorRun(activity: Activity): boolean {
+  const subtype = (activity.subtype ?? '').toLowerCase().replace(/[\s_-]/g, '');
+  return INDOOR_RUNNING_SUBTYPES.has(subtype);
+}
+
 const DISTANCES: PersonalBestDistance[] = [
   {
     key: '400M',
@@ -93,10 +105,13 @@ export function PersonalBest({
 }: PersonalBestProps) {
   const { locale } = useLocale();
 
-  // Only outdoor runs with valid GPS tracks (polyline must be substantial, not just a point)
-  const runs = activities.filter(
-    (a) =>
-      a.type === 'Run' && a.summary_polyline && a.summary_polyline.length > 20
+  const outdoorRuns = activities.filter(
+    (a) => a.type === 'Run' && !isIndoorRun(a)
+  );
+
+  // Whole-activity PBs additionally require a valid GPS track.
+  const runs = outdoorRuns.filter(
+    (a) => a.summary_polyline && a.summary_polyline.length > 20
   );
 
   const labels: Record<string, string> =
@@ -128,10 +143,9 @@ export function PersonalBest({
     const { key } = distance;
     if ('bestTimeField' in distance) {
       const { bestTimeField, targetKm, minPaceSeconds } = distance;
-      const matching = activities.filter((a) => {
+      const matching = outdoorRuns.filter((a) => {
         const time = a[bestTimeField];
-        if (a.type !== 'Run' || typeof time !== 'number' || time <= 0)
-          return false;
+        if (typeof time !== 'number' || time <= 0) return false;
         const pacePerKm = time / targetKm;
         return pacePerKm >= minPaceSeconds && pacePerKm <= 480;
       });

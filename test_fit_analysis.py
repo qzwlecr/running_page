@@ -5,7 +5,10 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "run_page"))
 
-from gpxtrackposter.track import calculate_fastest_distance_time
+from gpxtrackposter.track import (
+    calculate_fastest_distance_time,
+    is_indoor_running_subtype,
+)
 
 
 def make_records(distances, timestamps):
@@ -59,3 +62,16 @@ def test_fastest_distance_can_start_after_a_pause():
     )
 
     assert calculate_fastest_distance_time(records, 5000) == pytest.approx(1500)
+
+
+@pytest.mark.parametrize(
+    "subtype",
+    ["indoor", "IndoorRunning", "treadmill", "virtual_run", "virtual-run"],
+)
+def test_indoor_running_subtypes_are_excluded_from_personal_bests(subtype):
+    assert is_indoor_running_subtype(subtype)
+
+
+@pytest.mark.parametrize("subtype", [None, "", "generic", "trail"])
+def test_outdoor_running_subtypes_remain_eligible_for_personal_bests(subtype):
+    assert not is_indoor_running_subtype(subtype)

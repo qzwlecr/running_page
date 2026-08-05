@@ -48,6 +48,21 @@ BEST_EFFORT_DISTANCES = {
     "best_half_marathon_time": 21097.5,
 }
 
+INDOOR_RUNNING_SUBTYPES = {
+    "indoor",
+    "indoorrunning",
+    "treadmill",
+    "virtualrun",
+}
+
+
+def is_indoor_running_subtype(subtype):
+    """Return whether an activity subtype represents an indoor run."""
+
+    normalized = str(subtype or "").lower()
+    normalized = normalized.replace("_", "").replace("-", "").replace(" ", "")
+    return normalized in INDOOR_RUNNING_SUBTYPES
+
 
 def calculate_fastest_distance_time(records, target_distance):
     """Estimate the fastest time for a distance from FIT record samples.
@@ -524,7 +539,7 @@ class Track:
         self.elevation_gain = (
             message["total_ascent"] if "total_ascent" in message else 0
         )
-        if self.type == "Run":
+        if self.type == "Run" and not is_indoor_running_subtype(self.subtype):
             records = fit.get("record_mesgs", [])
             for field, distance in BEST_EFFORT_DISTANCES.items():
                 setattr(
